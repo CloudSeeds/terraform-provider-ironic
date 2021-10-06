@@ -1,6 +1,7 @@
 package ironic
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -112,7 +113,15 @@ func resourceNodeV1() *schema.Resource {
 				Computed: true,
 			},
 			"network_data": {
-				Type:     schema.TypeMap,
+				Type: schema.TypeString,
+				ValidateFunc: func(i interface{}, s string) ([]string, []error) {
+					var dump interface{}
+					err := json.Unmarshal([]byte(i.(string)), &dump)
+					if err == nil {
+						return []string{}, []error{}
+					}
+					return []string{}, []error{err}
+				},
 				Optional: true,
 			},
 			"power_interface": {
@@ -501,7 +510,14 @@ func propertiesMerge(d *schema.ResourceData, key string) map[string]interface{} 
 // Convert terraform schema to gophercloud CreateOpts
 // TODO: Is there a better way to do this? Annotations?
 func schemaToCreateOpts(d *schema.ResourceData) *nodes.CreateOpts {
+	var networkData map[string]interface{}
+	rawNetworkData := []byte(d.Get("network_data").(string))
+
+	err := json.Unmarshal(rawNetworkData, &networkData)
+	fmt.Println(err, networkData)
+
 	properties := propertiesMerge(d, "root_device")
+
 	return &nodes.CreateOpts{
 		BootInterface:       d.Get("boot_interface").(string),
 		ConductorGroup:      d.Get("conductor_group").(string),
@@ -514,7 +530,7 @@ func schemaToCreateOpts(d *schema.ResourceData) *nodes.CreateOpts {
 		ManagementInterface: d.Get("management_interface").(string),
 		Name:                d.Get("name").(string),
 		NetworkInterface:    d.Get("network_interface").(string),
-		NetworkData:         d.Get("network_data").(map[string]interface{}),
+		NetworkData:         networkData,
 		Owner:               d.Get("owner").(string),
 		PowerInterface:      d.Get("power_interface").(string),
 		Properties:          properties,
