@@ -511,8 +511,8 @@ func propertiesMerge(d *schema.ResourceData, key string) map[string]interface{} 
 // TODO: Is there a better way to do this? Annotations?
 func schemaToCreateOpts(d *schema.ResourceData) *nodes.CreateOpts {
 	var networkData map[string]interface{}
-	if nil != d.Get("network_data") {
-		rawNetworkData := []byte(d.Get("network_data").(string))
+	if networkDataInterface, ok := d.GetOk("network_data"); ok {
+		rawNetworkData := []byte(networkDataInterface.(string))
 		json.Unmarshal(rawNetworkData, &networkData)
 	}
 

@@ -175,8 +175,8 @@ func resourceDeploymentCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	var networkData map[string]interface{}
-	if nil != d.Get("network_data") {
-		rawNetworkData := []byte(d.Get("network_data").(string))
+	if networkDataInterface, ok := d.GetOk("network_data"); ok {
+		rawNetworkData := []byte(networkDataInterface.(string))
 		json.Unmarshal(rawNetworkData, &networkData)
 	}
 
