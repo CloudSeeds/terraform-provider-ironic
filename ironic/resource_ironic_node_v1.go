@@ -9,6 +9,7 @@ import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/baremetal/v1/nodes"
 	"github.com/gophercloud/gophercloud/openstack/baremetal/v1/ports"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
@@ -19,6 +20,10 @@ func resourceNodeV1() *schema.Resource {
 		Read:   resourceNodeV1Read,
 		Update: resourceNodeV1Update,
 		Delete: resourceNodeV1Delete,
+
+		Timeouts: &schema.ResourceTimeout{
+			Delete: schema.DefaultTimeout(5 * time.Minute),
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -498,7 +503,25 @@ func resourceNodeV1Delete(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	return nodes.Delete(client, d.Id()).ExtractErr()
+	errC := make(chan error)
+	go func(c chan error) {
+		c <- nodes.Delete(client, d.Id()).ExtractErr()
+	}(errC)
+
+	return resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		select {
+		case errC <- err:
+			// The resource got deleted successfully, we can signal success by returning `nil`
+			if err == nil {
+				return nil
+			}
+			// Some error happened during deletion, that is not recoverable
+			return resource.NonRetryableError(err)
+		default:
+			// The resource hasn't yet been deleted, check again later
+			return resource.RetryableError(fmt.Errorf("Expected resource being deleted, but wasn't"))
+		}
+	})
 }
 
 func propertiesMerge(d *schema.ResourceData, key string) map[string]interface{} {
