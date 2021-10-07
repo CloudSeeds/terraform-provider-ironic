@@ -10,11 +10,13 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gophercloud/gophercloud/openstack/baremetal/v1/nodes"
 	utils "github.com/gophercloud/utils/openstack/baremetal/v1/nodes"
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
@@ -24,6 +26,10 @@ func resourceDeployment() *schema.Resource {
 		Create: resourceDeploymentCreate,
 		Read:   resourceDeploymentRead,
 		Delete: resourceDeploymentDelete,
+
+		Timeouts: &schema.ResourceTimeout{
+			Delete: schema.DefaultTimeout(15 * time.Minute),
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -315,5 +321,23 @@ func resourceDeploymentDelete(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	return ChangeProvisionStateToTarget(client, d.Id(), "deleted", nil, nil)
+	errC := make(chan error)
+	go func(c chan error) {
+		c <- ChangeProvisionStateToTarget(client, d.Id(), "deleted", nil, nil)
+	}(errC)
+
+	return resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		select {
+		case errC <- err:
+			// The resource got deleted successfully, we can signal success by returning `nil`
+			if err == nil {
+				return nil
+			}
+			// Some error happened during deletion, that is not recoverable
+			return resource.NonRetryableError(err)
+		default:
+			// The resource hasn't yet been deleted, check again later
+			return resource.RetryableError(fmt.Errorf("Expected deployment being deleted, but wasn't"))
+		}
+	})
 }
