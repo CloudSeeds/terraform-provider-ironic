@@ -510,7 +510,7 @@ func resourceNodeV1Delete(d *schema.ResourceData, meta interface{}) error {
 
 	return resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		select {
-		case errC <- err:
+		case err := <-errC:
 			// The resource got deleted successfully, we can signal success by returning `nil`
 			if err == nil {
 				return nil
