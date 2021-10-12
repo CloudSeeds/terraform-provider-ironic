@@ -72,18 +72,19 @@ func resourceDeployment() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
-			"network_data": {
-				Type: schema.TypeString,
-				ValidateFunc: func(i interface{}, s string) ([]string, []error) {
-					var dump interface{}
-					err := json.Unmarshal([]byte(i.(string)), &dump)
-					if err == nil {
-						return []string{}, []error{}
-					}
-					return []string{}, []error{err}
-				},
+			"ports": {
+				Type:     schema.TypeSet,
 				Optional: true,
-				ForceNew: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeMap,
+				},
+			},
+			"networks": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeMap,
+				},
 			},
 			"metadata": {
 				Type:     schema.TypeMap,
@@ -180,11 +181,7 @@ func resourceDeploymentCreate(d *schema.ResourceData, meta interface{}) error {
 		userData = ignitionData
 	}
 
-	var networkData map[string]interface{}
-	if networkDataInterface, ok := d.GetOk("network_data"); ok {
-		rawNetworkData := []byte(networkDataInterface.(string))
-		json.Unmarshal(rawNetworkData, &networkData)
-	}
+	var networkData = getNetworkData(d)
 
 	configDrive, err := buildConfigDrive(client.Microversion,
 		userData,

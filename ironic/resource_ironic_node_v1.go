@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -117,18 +119,6 @@ func resourceNodeV1() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"network_data": {
-				Type: schema.TypeString,
-				ValidateFunc: func(i interface{}, s string) ([]string, []error) {
-					var dump interface{}
-					err := json.Unmarshal([]byte(i.(string)), &dump)
-					if err == nil {
-						return []string{}, []error{}
-					}
-					return []string{}, []error{err}
-				},
-				Optional: true,
-			},
 			"power_interface": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -164,6 +154,13 @@ func resourceNodeV1() *schema.Resource {
 				Computed: true,
 			},
 			"ports": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeMap,
+				},
+			},
+			"networks": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
@@ -530,14 +527,142 @@ func propertiesMerge(d *schema.ResourceData, key string) map[string]interface{} 
 	return properties
 }
 
+func isIn(needle string, haystack []string) bool {
+	for _, hay := range haystack {
+		if hay == needle {
+			return true
+		}
+	}
+
+	return false
+}
+
+func parseListOfStrings(jsonString string) []string {
+	var result []string
+	json.Unmarshal([]byte(jsonString), &result)
+	return result
+}
+
+func parseNumber(jsonString string) int64 {
+	var result int64
+	json.Unmarshal([]byte(jsonString), &result)
+	return result
+}
+
+func cleanPort(port map[string]string) interface{} {
+	result := make(map[string]interface{})
+
+	for k, v := range port {
+		switch k {
+		case "bond_links":
+			result[k] = parseListOfStrings(v)
+		case "bond_miimon":
+			result[k] = parseNumber(v)
+		case "vlan_id":
+			result[k] = parseNumber(v)
+		default:
+			result[k] = v
+		}
+	}
+
+	return result
+}
+
+func parseIPAddress(nw map[string]string) (string, string) {
+	if nw["type"] == "ipv6" {
+		return nw["ip_address"], ""
+	}
+	if strings.Contains(nw["ip_address"], "/") {
+		ipAddress, ipNetmask, err := net.ParseCIDR(nw["ip_address"])
+		if err != nil {
+			panic(err)
+		}
+
+		return ipAddress.String(), ipNetmask.Mask.String()
+	}
+
+	return nw["ip_address"], nw["netmask"]
+}
+
+func parseRoutes(s string) []map[string]string {
+	var parsed []map[string]string
+
+	json.Unmarshal([]byte(s), &parsed)
+
+	for idx, route := range parsed {
+		// If the network is currently stored in CIDR notation we split it into address and mask, otherwise we leave it as is
+		if strings.Contains(route["network"], "/") {
+			_, ipNetmask, err := net.ParseCIDR(route["network"])
+			if err != nil {
+				panic(err)
+			}
+
+			parsed[idx] = map[string]string{
+				"network": ipNetmask.IP.String(),
+				"netmask": ipNetmask.Mask.String(),
+				"gateway": route["gateway"],
+			}
+		}
+	}
+
+	return parsed
+}
+
+func cleanNetwork(nw map[string]string) interface{} {
+	result := make(map[string]interface{})
+
+	for k, v := range nw {
+		switch k {
+		case "ip_address":
+			address, netmask := parseIPAddress(nw)
+
+			result["ip_address"] = address
+			if netmask != "" {
+				result["netmask"] = netmask
+			}
+		case "netmask": // We silently drop this field, it is always covered by `ip_address`
+			break
+		case "routes":
+			result[k] = parseRoutes(v)
+		default:
+			result[k] = v
+		}
+	}
+
+	return result
+}
+
+func getNetworkData(d *schema.ResourceData) map[string]interface{} {
+	result := make(map[string]interface{})
+	l := make([]interface{}, 0)
+	n := make([]interface{}, 0)
+	s := make([]interface{}, 0)
+
+	if ports, ok := d.GetOk("ports"); ok {
+		for _, port := range ports.([]map[string]string) {
+			if _, ok := port["id"]; ok {
+				l = append(l, cleanPort(port))
+			}
+		}
+	}
+
+	if networks, ok := d.GetOk("networks"); ok {
+		for _, network := range networks.([]map[string]string) {
+			n = append(n, cleanNetwork(network))
+		}
+	}
+
+	if len(l) == 0 && len(n) == 0 && len(s) == 0 {
+		return nil
+	}
+
+	return result
+}
+
 // Convert terraform schema to gophercloud CreateOpts
 // TODO: Is there a better way to do this? Annotations?
 func schemaToCreateOpts(d *schema.ResourceData) *nodes.CreateOpts {
-	var networkData map[string]interface{}
-	if networkDataInterface, ok := d.GetOk("network_data"); ok {
-		rawNetworkData := []byte(networkDataInterface.(string))
-		json.Unmarshal(rawNetworkData, &networkData)
-	}
+	var networkData = getNetworkData(d)
 
 	properties := propertiesMerge(d, "root_device")
 
