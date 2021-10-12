@@ -18,6 +18,8 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+
+	"github.com/openshift-metal3/terraform-provider-ironic/ironic/nwd"
 )
 
 // Schema resource definition for an Ironic deployment.
@@ -181,7 +183,7 @@ func resourceDeploymentCreate(d *schema.ResourceData, meta interface{}) error {
 		userData = ignitionData
 	}
 
-	var networkData = getNetworkData(d)
+	var networkData = nwd.GetNetworkData(d)
 
 	configDrive, err := buildConfigDrive(client.Microversion,
 		userData,
