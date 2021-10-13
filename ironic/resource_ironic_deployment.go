@@ -77,6 +77,7 @@ func resourceDeployment() *schema.Resource {
 			"ports": {
 				Type:     schema.TypeSet,
 				Optional: true,
+				ForceNew: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeMap,
 				},
@@ -84,6 +85,7 @@ func resourceDeployment() *schema.Resource {
 			"networks": {
 				Type:     schema.TypeSet,
 				Optional: true,
+				ForceNew: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeMap,
 				},
