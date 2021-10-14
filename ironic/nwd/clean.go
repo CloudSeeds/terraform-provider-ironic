@@ -1,9 +1,10 @@
 package nwd
 
-func cleanPort(port map[string]string) interface{} {
+func cleanPort(port map[string]interface{}) interface{} {
 	result := make(map[string]interface{})
 
-	for k, v := range port {
+	for k, vIface := range port {
+		v := vIface.(string)
 		switch k {
 		case "bond_links":
 			result[k] = parseListOfStrings(v)
@@ -19,10 +20,11 @@ func cleanPort(port map[string]string) interface{} {
 	return result
 }
 
-func cleanNetwork(nw map[string]string) interface{} {
+func cleanNetwork(nw map[string]interface{}) interface{} {
 	result := make(map[string]interface{})
 
-	for k, v := range nw {
+	for k, vIface := range nw {
+		v := vIface.(string)
 		switch k {
 		case "ip_address":
 			address, netmask := parseIPAddress(nw)

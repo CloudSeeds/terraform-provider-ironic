@@ -18,12 +18,12 @@ func parseNumber(jsonString string) int64 {
 	return result
 }
 
-func parseIPAddress(nw map[string]string) (string, string) {
+func parseIPAddress(nw map[string]interface{}) (string, string) {
 	if nw["type"] == "ipv6" {
-		return nw["ip_address"], ""
+		return nw["ip_address"].(string), ""
 	}
-	if strings.Contains(nw["ip_address"], "/") {
-		ipAddress, ipNetmask, err := net.ParseCIDR(nw["ip_address"])
+	if strings.Contains(nw["ip_address"].(string), "/") {
+		ipAddress, ipNetmask, err := net.ParseCIDR(nw["ip_address"].(string))
 		if err != nil {
 			panic(err)
 		}
@@ -31,7 +31,7 @@ func parseIPAddress(nw map[string]string) (string, string) {
 		return ipAddress.String(), ipNetmask.Mask.String()
 	}
 
-	return nw["ip_address"], nw["netmask"]
+	return nw["ip_address"].(string), nw["netmask"].(string)
 }
 
 func parseRoutes(s string) []map[string]string {

@@ -10,7 +10,7 @@ func GetNetworkData(d *schema.ResourceData) map[string]interface{} {
 
 	if ports, ok := d.GetOk("ports"); ok {
 		for _, portIface := range ports.(*schema.Set).List() {
-			port := portIface.(map[string]string)
+			port := portIface.(map[string]interface{})
 			if _, ok := port["id"]; ok {
 				l = append(l, cleanPort(port))
 			}
@@ -19,7 +19,7 @@ func GetNetworkData(d *schema.ResourceData) map[string]interface{} {
 
 	if networks, ok := d.GetOk("networks"); ok {
 		for _, networkIface := range networks.(*schema.Set).List() {
-			network := networkIface.(map[string]string)
+			network := networkIface.(map[string]interface{})
 			n = append(n, cleanNetwork(network))
 		}
 	}
