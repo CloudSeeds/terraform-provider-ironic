@@ -3,7 +3,6 @@ package nwd
 import "github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 
 func GetNetworkData(d *schema.ResourceData) map[string]interface{} {
-	result := make(map[string]interface{})
 	l := make([]interface{}, 0)
 	n := make([]interface{}, 0)
 	s := make([]interface{}, 0)
@@ -28,5 +27,9 @@ func GetNetworkData(d *schema.ResourceData) map[string]interface{} {
 		return nil
 	}
 
-	return result
+	return map[string]interface{}{
+		"links":    l,
+		"networks": n,
+		"services": s,
+	}
 }
