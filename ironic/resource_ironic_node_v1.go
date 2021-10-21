@@ -8,10 +8,10 @@ import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/baremetal/v1/nodes"
 	"github.com/gophercloud/gophercloud/openstack/baremetal/v1/ports"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 
-	"github.com/openshift-metal3/terraform-provider-ironic/ironic/logger"
 	"github.com/openshift-metal3/terraform-provider-ironic/ironic/nwd"
 )
 
@@ -491,6 +491,8 @@ func resourceNodeV1Update(d *schema.ResourceData, meta interface{}) error {
 
 // Delete a node from Ironic
 func resourceNodeV1Delete(d *schema.ResourceData, meta interface{}) error {
+	logger := hclog.Default()
+
 	client, err := meta.(*Clients).GetIronicClient()
 	if err != nil {
 		return err

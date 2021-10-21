@@ -14,12 +14,12 @@ import (
 
 	"github.com/gophercloud/gophercloud/openstack/baremetal/v1/nodes"
 	utils "github.com/gophercloud/utils/openstack/baremetal/v1/nodes"
+	"github.com/hashicorp/go-hclog"
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 
-	"github.com/openshift-metal3/terraform-provider-ironic/ironic/logger"
 	"github.com/openshift-metal3/terraform-provider-ironic/ironic/nwd"
 )
 
@@ -318,6 +318,8 @@ func resourceDeploymentRead(d *schema.ResourceData, meta interface{}) error {
 
 // Delete an deployment from Ironic - this cleans the node and returns it's state to 'available'
 func resourceDeploymentDelete(d *schema.ResourceData, meta interface{}) error {
+	logger := hclog.Default()
+
 	client, err := meta.(*Clients).GetIronicClient()
 	if err != nil {
 		return err
