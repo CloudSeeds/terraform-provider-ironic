@@ -33,6 +33,8 @@ func cleanNetwork(nw map[string]interface{}) interface{} {
 			if netmask != "" {
 				result["netmask"] = netmask
 			}
+		case "dns_nameservers":
+			result["dns_nameservers"] = parseListOrSingleDNSAddress(v)
 		case "netmask": // We silently drop this field, it is always covered by `ip_address`
 			break
 		case "routes":

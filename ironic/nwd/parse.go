@@ -6,6 +6,17 @@ import (
 	"strings"
 )
 
+func parseListOrSingleDNSAddress(jsonString string) []string {
+	var result []string
+
+	err := json.Unmarshal([]byte(jsonString), &result)
+	if err != nil {
+		result = append(result, jsonString)
+	}
+
+	return result
+}
+
 func parseListOfStrings(jsonString string) []string {
 	var result []string
 	json.Unmarshal([]byte(jsonString), &result)
