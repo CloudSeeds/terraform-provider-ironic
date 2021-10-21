@@ -265,6 +265,9 @@ func (workflow *provisionStateWorkflow) toDeleted() (bool, error) {
 			return true, err
 		}
 		return false, nil
+	case "clean wait":
+		log.Printf("[DEBUG] Node %s is '%s', waiting for Ironic to finish.", workflow.uuid, state)
+		return false, nil
 	default:
 		return true, fmt.Errorf("cannot delete node in state '%s'", state)
 	}
