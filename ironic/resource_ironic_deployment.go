@@ -327,26 +327,26 @@ func resourceDeploymentDelete(d *schema.ResourceData, meta interface{}) error {
 
 	errC := make(chan error)
 	go func(c chan error) {
-		logger.Info("Starting to delete deployment '%v'\n", d.Id())
+		logger.Info(fmt.Sprintf("Starting to delete deployment '%v'", d.Id()))
 		c <- ChangeProvisionStateToTarget(client, d.Id(), "deleted", nil, nil)
 	}(errC)
 
 	return resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		logger.Info("Retry-callback for deployment '%v' has been called\n", d.Id())
+		logger.Info(fmt.Sprintf("Retry-callback for deployment '%v' has been called", d.Id()))
 
 		select {
 		case err := <-errC:
 			// The resource got deleted successfully, we can signal success by returning `nil`
 			if err == nil {
-				logger.Info("Deletion of deployment '%v' suceeded\n", d.Id())
+				logger.Info(fmt.Sprintf("Deletion of deployment '%v' suceeded", d.Id()))
 				return nil
 			}
 			// Some error happened during deletion, that is not recoverable
-			logger.Error("Deletion of deplyoment '%v' errored: %v\n", d.Id(), err)
+			logger.Error(fmt.Sprintf("Deletion of deplyoment '%v' errored: %v", d.Id(), err))
 			return resource.NonRetryableError(err)
 		default:
 			// The resource hasn't yet been deleted, check again later
-			logger.Info("Deletion of deployment '%v' is still ongoing\n", d.Id())
+			logger.Info(fmt.Sprintf("Deletion of deployment '%v' is still ongoing", d.Id()))
 			return resource.RetryableError(fmt.Errorf("Expected deployment being deleted, but wasn't"))
 		}
 	})

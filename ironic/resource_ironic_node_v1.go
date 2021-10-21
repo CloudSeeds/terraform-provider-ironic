@@ -498,34 +498,34 @@ func resourceNodeV1Delete(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	logger.Info("Changing provisionstate of node '%v' to 'deleted'\n", d.Id())
+	logger.Info(fmt.Sprintf("Changing provisionstate of node '%v' to 'deleted'", d.Id()))
 	if err := ChangeProvisionStateToTarget(client, d.Id(), "deleted", nil, nil); err != nil {
 		return err
 	}
-	logger.Info("Provisionstate of node '%v' reached 'deleted'\n", d.Id())
+	logger.Info(fmt.Sprintf("Provisionstate of node '%v' reached 'deleted'", d.Id()))
 
 	errC := make(chan error)
 	go func(c chan error) {
-		logger.Info("Starting to delete node '%v'\n", d.Id())
+		logger.Info(fmt.Sprintf("Starting to delete node '%v'", d.Id()))
 		c <- nodes.Delete(client, d.Id()).ExtractErr()
 	}(errC)
 
 	return resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		logger.Info("Retry-callback for node '%v' has been called\n", d.Id())
+		logger.Info(fmt.Sprintf("Retry-callback for node '%v' has been called", d.Id()))
 
 		select {
 		case err := <-errC:
 			// The resource got deleted successfully, we can signal success by returning `nil`
 			if err == nil {
-				logger.Info("Deletion of node '%v' succeeded\n", d.Id())
+				logger.Info(fmt.Sprintf("Deletion of node '%v' succeeded", d.Id()))
 				return nil
 			}
 			// Some error happened during deletion, that is not recoverable
-			logger.Error("Deletion of node '%v' errored: %v\n", d.Id(), err)
+			logger.Error(fmt.Sprintf("Deletion of node '%v' errored: %v", d.Id(), err))
 			return resource.NonRetryableError(err)
 		default:
 			// The resource hasn't yet been deleted, check again later
-			logger.Info("Deletion of node '%v' is still ongoing\n", d.Id())
+			logger.Info(fmt.Sprintf("Deletion of node '%v' is still ongoing", d.Id()))
 			return resource.RetryableError(fmt.Errorf("Expected resource being deleted, but wasn't"))
 		}
 	})
