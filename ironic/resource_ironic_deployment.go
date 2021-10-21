@@ -331,6 +331,8 @@ func resourceDeploymentDelete(d *schema.ResourceData, meta interface{}) error {
 		c <- ChangeProvisionStateToTarget(client, d.Id(), "deleted", nil, nil)
 	}(errC)
 
+	logger.Info(fmt.Sprintf("Timeout for deployment deletion: %v", d.Timeout(schema.TimeoutDelete)))
+
 	return resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		logger.Info(fmt.Sprintf("Retry-callback for deployment '%v' has been called", d.Id()))
 
