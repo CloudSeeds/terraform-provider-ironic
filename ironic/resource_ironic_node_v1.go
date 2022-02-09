@@ -219,6 +219,11 @@ func resourceNodeV1Create(d *schema.ResourceData, meta interface{}) error {
 		for _, portInterface := range portList {
 			port := portInterface.(map[string]interface{})
 
+			// If there is no physical address associated with the port, we do not want to create a "layer 2" entry for it
+			if _, ok := port["address"]; !ok {
+				continue
+			}
+
 			// Terraform map can't handle bool... seriously.
 			var pxeEnabled bool
 			if port["pxe_enabled"] != nil {
